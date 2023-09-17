@@ -1,28 +1,34 @@
-// userRoutes.js
 const express = require('express');
 const router = express.Router();
-const db = require('../db'); // Import the database connection module
+const db = require('../services/db');
+const { check, validationResult } = require('express-validator');
 
-// Define routes related to users
 
-// GET all users
+const handleDbError = (res, err, message) => {
+  console.error(message, err);
+  res.status(500).json({ error: 'Internal server error' });
+};
+
+
+const registrationValidation = [
+  check('username').notEmpty().isLength({ min: 3 }).escape(),
+  check('password').isLength({ min: 6 }),
+];
+
 router.get('/', (req, res) => {
-  db.query('SELECT * FROM register', (err, results) => {
+  db.query('SELECT * FROM users', (err, results) => {
     if (err) {
-      console.error('Error fetching users: ' + err.message);
-      return res.status(500).json({ error: 'Failed to fetch users' });
+      return handleDbError(res, err, 'Error fetching users:');
     }
     res.json(results);
   });
 });
 
-// GET a specific user by ID
 router.get('/:id', (req, res) => {
   const userId = req.params.id;
   db.query('SELECT * FROM users WHERE id = ?', userId, (err, results) => {
     if (err) {
-      console.error('Error fetching user: ' + err.message);
-      return res.status(500).json({ error: 'Failed to fetch user' });
+      return handleDbError(res, err, 'Error fetching user:');
     }
     if (results.length === 0) {
       return res.status(404).json({ error: 'User not found' });
@@ -31,45 +37,42 @@ router.get('/:id', (req, res) => {
   });
 });
 
-// POST a new user
-router.post('/', (req, res) => {
+
+router.post('/', registrationValidation, (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   const { username, password } = req.body;
   const newUser = { username, password };
 
-  // Insert the new user into the 'users' table
-  db.query('INSERT INTO register SET ?', newUser, (err, result) => {
+  db.query('INSERT INTO users SET ?', newUser, (err, result) => {
     if (err) {
-      console.error('Error adding user: ' + err.message);
-      return res.status(500).json({ error: 'Failed to add user' });
+      return handleDbError(res, err, 'Error adding user:');
     }
     res.status(201).json({ message: 'User added successfully', id: result.insertId });
   });
 });
 
-// PUT (update) a user by ID
 router.put('/:id', (req, res) => {
   const userId = req.params.id;
   const updatedUser = req.body;
 
-  // Update the user in the 'users' table
-  db.query('UPDATE register SET ? WHERE id = ?', [updatedUser, userId], (err, result) => {
+  db.query('UPDATE users SET ? WHERE id = ?', [updatedUser, userId], (err, result) => {
     if (err) {
-      console.error('Error updating user: ' + err.message);
-      return res.status(500).json({ error: 'Failed to update user' });
+      return handleDbError(res, err, 'Error updating user:');
     }
     res.json({ message: 'User updated successfully' });
   });
 });
 
-// DELETE a user by ID
 router.delete('/:id', (req, res) => {
   const userId = req.params.id;
 
-  // Delete the user from the 'users' table
-  db.query('DELETE FROM register WHERE id = ?', userId, (err, result) => {
+  db.query('DELETE FROM users WHERE id = ?', userId, (err, result) => {
     if (err) {
-      console.error('Error deleting user: ' + err.message);
-      return res.status(500).json({ error: 'Failed to delete user' });
+      return handleDbError(res, err, 'Error deleting user:');
     }
     res.json({ message: 'User deleted successfully' });
   });

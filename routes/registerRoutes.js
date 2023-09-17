@@ -1,43 +1,52 @@
-// registerRoutes.js
 const express = require('express');
 const router = express.Router();
-const db = require('../db'); // Import the database connection module
+const db = require('../services/db');
+const { check, validationResult } = require('express-validator');
 
-// Define routes related to user registration
 
-// POST a new user registration
-router.post('/', (req, res) => {
-  const { username, password } = req.body;
-  const newUser = { username, password };
+const handleDbError = (res, err, message) => {
+  console.error(message, err);
+  res.status(500).json({ error: 'Internal server error' });
+};
 
-  // Insert the new user into the 'register' table
-  db.query('INSERT INTO register SET ?', newUser, (err, result) => {
+
+const registrationValidation = [
+  check('username').notEmpty().isLength({ min: 3 }).escape(),
+  check('email').isEmail().normalizeEmail(),
+  check('password').isLength({ min: 6 }),
+];
+
+router.post('/', registrationValidation, (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { username, email, password } = req.body;
+  const newUser = { username, email, password };
+
+  db.query('INSERT INTO users SET ?', newUser, (err, result) => {
     if (err) {
-      console.error('Error registering user: ' + err.message);
-      return res.status(500).json({ error: 'Registration failed' });
+      return handleDbError(res, err, 'Error registering user:');
     }
     res.status(201).json({ message: 'User registered successfully', id: result.insertId });
   });
 });
 
-// GET all registered users
 router.get('/', (req, res) => {
-  db.query('SELECT * FROM register', (err, results) => {
+  db.query('SELECT * FROM users', (err, results) => {
     if (err) {
-      console.error('Error fetching registered users: ' + err.message);
-      return res.status(500).json({ error: 'Failed to fetch registered users' });
+      return handleDbError(res, err, 'Error fetching registered users:');
     }
     res.json(results);
   });
 });
 
-// GET a specific registered user by ID
 router.get('/:id', (req, res) => {
   const userId = req.params.id;
-  db.query('SELECT * FROM register WHERE id = ?', userId, (err, results) => {
+  db.query('SELECT * FROM users WHERE id = ?', userId, (err, results) => {
     if (err) {
-      console.error('Error fetching registered user: ' + err.message);
-      return res.status(500).json({ error: 'Failed to fetch registered user' });
+      return handleDbError(res, err, 'Error fetching registered user:');
     }
     if (results.length === 0) {
       return res.status(404).json({ error: 'User not found' });
@@ -46,29 +55,25 @@ router.get('/:id', (req, res) => {
   });
 });
 
-// Update user registration information by ID (PUT)
 router.put('/:id', (req, res) => {
   const userId = req.params.id;
   const { username, password } = req.body;
   const updatedUser = { username, password };
 
-  db.query('UPDATE register SET ? WHERE id = ?', [updatedUser, userId], (err, result) => {
+  db.query('UPDATE users SET ? WHERE id = ?', [updatedUser, userId], (err, result) => {
     if (err) {
-      console.error('Error updating registered user: ' + err.message);
-      return res.status(500).json({ error: 'Failed to update registered user' });
+      return handleDbError(res, err, 'Error updating registered user:');
     }
     res.json({ message: 'User registration updated successfully' });
   });
 });
 
-// Delete a registered user by ID (DELETE)
 router.delete('/:id', (req, res) => {
   const userId = req.params.id;
 
-  db.query('DELETE FROM register WHERE id = ?', userId, (err, result) => {
+  db.query('DELETE FROM users WHERE id = ?', userId, (err, result) => {
     if (err) {
-      console.error('Error deleting registered user: ' + err.message);
-      return res.status(500).json({ error: 'Failed to delete registered user' });
+      return handleDbError(res, err, 'Error deleting registered user:');
     }
     res.json({ message: 'User registration deleted successfully' });
   });

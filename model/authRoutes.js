@@ -1,60 +1,160 @@
-// authRoutes.js
 const express = require('express');
-const router = express.Router();
-const mysql = require('mysql');
-const bcrypt = require('bcrypt'); // For password hashing
-const db = require('../db');
+const bodyParser = require('body-parser');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const { check, validationResult } = require('express-validator');
+const db = require('../services/db'); 
 
+const app = express();
+const port = process.env.PORT || 3001;
 
-// Register a new user
-router.post('/register', (req, res) => {
-  const { fullname, email, password } = req.body;
+app.use(bodyParser.json());
 
-  // Hash the user's password before storing it in the database
-  bcrypt.hash(password, 10, (err, hash) => {
-    if (err) {
-      console.error('Error hashing password: ' + err.message);
-      return res.status(500).json({ error: 'Registration failed' });
+const secretKey = process.env.JWT_SECRET || 'your-secret-key';
+
+const loggedInUsers = {};
+
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
+app.post(
+  '/register',
+  [
+    check('username').notEmpty().isLength({ min: 3 }).escape(),
+    check('email').isEmail().normalizeEmail(),
+    check('password').isLength({ min: 6 }),
+  ],
+  (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
     }
 
-    // Store the username and hashed password in the 'users' table
-    db.query('INSERT INTO register (fullname, email, password) VALUES (?, ?, ?)', [fullname, email, hash], (err, result) => {
+    const { username, email, password } = req.body;
+
+    const checkSql = 'SELECT * FROM users WHERE email = ? OR username = ?';
+    db.query(checkSql, [email, username], (err, result) => {
       if (err) {
-        console.error('Error registering user: ' + err.message);
-        return res.status(500).json({ error: 'Registration failed' });
+        console.error('Database query error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+        return;
       }
-      res.status(201).json({ message: 'User registered successfully', id: result.insertId });
+
+      if (result.length > 0) {
+        res.status(400).json({ error: 'User already exists' });
+      } else {
+        bcrypt.hash(password, 10, (err, hash) => {
+          if (err) {
+            console.error('Password hashing error:', err);
+            res.status(500).json({ error: 'Internal server error' });
+            return;
+          }
+
+          
+          const insertSql = 'INSERT INTO users (username, email, password) VALUES (?, ?, ?)';
+          db.query(insertSql, [username, email, hash], (err, result) => {
+            if (err) {
+              console.error('Database insertion error:', err);
+              res.status(500).json({ error: 'Internal server error' });
+              return;
+            }
+
+            console.log('User registered successfully');
+            res.status(201).json({ message: 'User registered successfully' });
+          });
+        });
+      }
+    });
+  }
+);
+
+
+app.post('/login', [
+    check('email').isEmail().normalizeEmail(),
+    check('password').isLength({ min: 6 }),
+  ], (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+  
+    const { email, password } = req.body;
+  
+    if (loggedInUsers[email]) {
+      return res.status(401).json({ error: 'User already logged in' });
+    }
+  
+    const sql = 'SELECT * FROM users WHERE email = ?';
+    db.query(sql, [email], (err, results) => {
+      if (err) {
+        console.error('Database query error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+        return;
+      }
+  
+      if (results.length === 0) {
+        res.status(401).json({ error: 'Authentication failed' });
+      } else {
+        const user = results[0];
+        bcrypt.compare(password, user.password, (err, result) => {
+          if (err || !result) {
+            res.status(401).json({ error: 'Authentication failed' });
+          } else {
+            loggedInUsers[email] = true;
+  
+            const token = jwt.sign({ userId: user.id, email: user.email }, secretKey, { expiresIn: '1h' });
+            res.status(200).json({ token });
+          }
+        });
+      }
     });
   });
-});
+  
+  
+  app.post('/logout', (req, res) => {
+    const { email } = req.body;
+  
+    if (!loggedInUsers[email]) {
+      return res.status(401).json({ error: 'User is not logged in' });
+    }
+  
+    const sql = 'DELETE FROM users WHERE email = ?';
+    db.query(sql, [email], (err, result) => {
+      if (err) {
+        console.error('Database delete error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+        return;
+      }
+  
+      delete loggedInUsers[email];
+  
+      res.status(200).json({ message: 'Logged out successfully' });
+    });
+  });
+  
+  
 
-// Login a user
-router.post('/login', (req, res) => {
-  const { fullname, password } = req.body;
+app.get('/protected', (req, res) => {
+  const token = req.headers.authorization;
 
-  // Retrieve the hashed password for the given username from the database
-  db.query('SELECT * FROM register WHERE fullname = ?', fullname, (err, results) => {
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  jwt.verify(token, secretKey, (err, decoded) => {
     if (err) {
-      console.error('Error fetching user: ' + err.message);
-      return res.status(500).json({ error: 'Login failed' });
+      console.error('JWT verification error:', err);
+      return res.status(401).json({ error: 'Unauthorized' });
     }
-
-    if (results.length === 0) {
-      return res.status(401).json({ error: 'Invalid username or password' });
-    }
-
-    const user = results[0];
-
-    // Compare the provided password with the stored hashed password
-    bcrypt.compare(password, user.password, (err, passwordMatch) => {
-      if (err || !passwordMatch) {
-        return res.status(401).json({ error: 'Invalid username or password' });
-      }
-
-      // User is authenticated
-      res.json({ message: 'Login successful' });
-    });
+    res.status(200).json({ message: 'Access granted', user: decoded });
   });
 });
 
-module.exports = router;
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
+;
+
+module.exports = app;

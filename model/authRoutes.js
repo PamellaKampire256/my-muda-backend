@@ -27,12 +27,18 @@ app.post(
     check('password').isLength({ min: 6 }),
   ],
   (req, res) => {
+    const { username, email, password, repeat_password } = req.body;
+
+    if (password !== repeat_password) {
+      return res.status(400).json({ error: 'Passwords do not match' });
+    }
+
     const errors = validationResult(req);
+
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { username, email, password } = req.body;
 
     const checkSql = 'SELECT * FROM users WHERE email = ? OR username = ?';
     db.query(checkSql, [email, username], (err, result) => {
@@ -113,26 +119,26 @@ app.post('/login', [
   });
   
   
-  app.post('/logout', (req, res) => {
-    const { email } = req.body;
+  // app.post('/logout', (req, res) => {
+  //   const { email } = req.body;
   
-    if (!loggedInUsers[email]) {
-      return res.status(401).json({ error: 'User is not logged in' });
-    }
+  //   if (!loggedInUsers[email]) {
+  //     return res.status(401).json({ error: 'User is not logged in' });
+  //   }
   
-    const sql = 'DELETE FROM users WHERE email = ?';
-    db.query(sql, [email], (err, result) => {
-      if (err) {
-        console.error('Database delete error:', err);
-        res.status(500).json({ error: 'Internal server error' });
-        return;
-      }
+  //   const sql = 'DELETE FROM users WHERE email = ?';
+  //   db.query(sql, [email], (err, result) => {
+  //     if (err) {
+  //       console.error('Database delete error:', err);
+  //       res.status(500).json({ error: 'Internal server error' });
+  //       return;
+  //     }
   
-      delete loggedInUsers[email];
+  //     delete loggedInUsers[email];
   
-      res.status(200).json({ message: 'Logged out successfully' });
-    });
-  });
+  //     res.status(200).json({ message: 'Logged out successfully' });
+  //   });
+  // });
   
   
 

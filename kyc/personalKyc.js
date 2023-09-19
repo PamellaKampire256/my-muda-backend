@@ -62,4 +62,36 @@ router.post(
   }
 );
 
+router.post('/create-company-details', (req, res) => {
+    const {
+      business_license,
+      trade_licenses,
+      company_registration_certificate,
+    } = req.body;
+  
+    if (!business_license || !trade_licenses || !company_registration_certificate) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+  
+    const insertSql = `
+      INSERT INTO company_information_kyc
+      (business_license, trade_licenses, company_registration_certificate)
+      VALUES (?, ?, ?)
+    `;
+  
+    db.query(
+      insertSql,
+      [business_license, trade_licenses, company_registration_certificate],
+      (err, result) => {
+        if (err) {
+          console.error('Database insertion error:', err);
+          res.status(500).json({ error: 'Internal server error' });
+        } else {
+          console.log('Company details submitted successfully');
+          res.status(201).json({ message: 'Company details submitted successfully' });
+        }
+      }
+    );
+  });
+  
 module.exports = router;

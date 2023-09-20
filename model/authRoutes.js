@@ -22,12 +22,12 @@ app.use((err, req, res, next) => {
 app.post(
   '/register',
   [
-    check('username').notEmpty().isLength({ min: 3 }).escape(),
+    check('full_name').notEmpty().isLength({ min: 3 }).escape(),
     check('email').isEmail().normalizeEmail(),
     check('password').isLength({ min: 6 }),
   ],
   (req, res) => {
-    const { username, email, password, repeat_password } = req.body;
+    const { full_name, email, password, repeat_password } = req.body;
 
     if (password !== repeat_password) {
       return res.status(400).json({ error: 'Passwords do not match' });
@@ -40,8 +40,8 @@ app.post(
     }
 
 
-    const checkSql = 'SELECT * FROM users WHERE email = ? OR username = ?';
-    db.query(checkSql, [email, username], (err, result) => {
+    const checkSql = 'SELECT * FROM users WHERE email = ? OR full_name = ?';
+    db.query(checkSql, [email, full_name], (err, result) => {
       if (err) {
         console.error('Database query error:', err);
         res.status(500).json({ error: 'Internal server error' });
@@ -59,8 +59,8 @@ app.post(
           }
 
           
-          const insertSql = 'INSERT INTO users (username, email, password) VALUES (?, ?, ?)';
-          db.query(insertSql, [username, email, hash], (err, result) => {
+          const insertSql = 'INSERT INTO users (full_name, email, password) VALUES (?, ?, ?)';
+          db.query(insertSql, [full_name, email, hash], (err, result) => {
             if (err) {
               console.error('Database insertion error:', err);
               res.status(500).json({ error: 'Internal server error' });
@@ -117,29 +117,6 @@ app.post('/login', [
       }
     });
   });
-  
-  
-  // app.post('/logout', (req, res) => {
-  //   const { email } = req.body;
-  
-  //   if (!loggedInUsers[email]) {
-  //     return res.status(401).json({ error: 'User is not logged in' });
-  //   }
-  
-  //   const sql = 'DELETE FROM users WHERE email = ?';
-  //   db.query(sql, [email], (err, result) => {
-  //     if (err) {
-  //       console.error('Database delete error:', err);
-  //       res.status(500).json({ error: 'Internal server error' });
-  //       return;
-  //     }
-  
-  //     delete loggedInUsers[email];
-  
-  //     res.status(200).json({ message: 'Logged out successfully' });
-  //   });
-  // });
-  
   
 
 app.get('/protected', (req, res) => {

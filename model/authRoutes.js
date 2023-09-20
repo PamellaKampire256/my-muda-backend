@@ -118,29 +118,6 @@ app.post('/login', [
     });
   });
   
-  
-  // app.post('/logout', (req, res) => {
-  //   const { email } = req.body;
-  
-  //   if (!loggedInUsers[email]) {
-  //     return res.status(401).json({ error: 'User is not logged in' });
-  //   }
-  
-  //   const sql = 'DELETE FROM users WHERE email = ?';
-  //   db.query(sql, [email], (err, result) => {
-  //     if (err) {
-  //       console.error('Database delete error:', err);
-  //       res.status(500).json({ error: 'Internal server error' });
-  //       return;
-  //     }
-  
-  //     delete loggedInUsers[email];
-  
-  //     res.status(200).json({ message: 'Logged out successfully' });
-  //   });
-  // });
-  
-  
 
 app.get('/protected', (req, res) => {
   const token = req.headers.authorization;

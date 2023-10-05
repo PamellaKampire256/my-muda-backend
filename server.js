@@ -11,7 +11,7 @@ app.use(bodyParser.json());
 app.use(express.json());
 app.use(
   cors({
-  origin: 'http://localhost:3000',
+  origin: '*',
   methods:['POST','PUT','DELETE','GET']
 })
 );

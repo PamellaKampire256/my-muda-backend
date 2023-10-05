@@ -58,7 +58,7 @@ router.post(
         }
 
         console.log('KYC data registered successfully');
-        res.status(201).json({ message: 'KYC data registered successfully' });
+        res.status(200).json({ message: 'KYC data registered successfully' });
       }
     );
   }
@@ -87,7 +87,7 @@ router.post('/create-company-details', (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
       } else {
         console.log('Company details submitted successfully');
-        res.status(201).json({ message: 'Company details submitted successfully' });
+        res.status(200).json({ message: 'Company details submitted successfully' });
       }
     }
   );

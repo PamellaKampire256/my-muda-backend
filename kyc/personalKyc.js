@@ -2,8 +2,14 @@ const express = require('express');
 const router = express.Router();
 const { check, validationResult } = require('express-validator');
 const db = require('../services/db');
-const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
+
+function createResponse(message, error = null) {
+  const response = { message };
+  if (error !== null) {
+    response.error = error;
+  }
+  return response;
+}
 
 router.post(
   '/create-personalkyc',
@@ -32,10 +38,8 @@ router.post(
     const errors = validationResult(req);
 
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      return res.status(400).json(createResponse('Validation failed', errors.array()));
     }
-
-    const id = 1;
 
     const kycSql = 'INSERT INTO personal_information_kyc (full_name, date_of_birth, nationality, id_number, phone_number, email_address, tax_id_number, source_of_funds) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
     db.query(
@@ -53,12 +57,12 @@ router.post(
       (err, kycResult) => {
         if (err) {
           console.error('KYC insertion error:', err);
-          res.status(500).json({ error: 'Internal server error' });
+          res.status(500).json(createResponse('Internal server error'));
           return;
         }
 
         console.log('KYC data registered successfully');
-        res.status(201).json({ message: 'KYC data registered successfully' });
+        res.status(201).json(createResponse('KYC data registered successfully'));
       }
     );
   }
@@ -69,7 +73,7 @@ router.post('/create-company-details', (req, res) => {
   const { business_license, company_registration_certificate } = req.body;
 
   if (!business_license || !company_registration_certificate) {
-    return res.status(400).json({ error: 'Business license and company registration certificate are required' });
+    return res.status(400).json(createResponse('Business license and company registration certificate are required'));
   }
 
   const insertSql = `
@@ -84,10 +88,10 @@ router.post('/create-company-details', (req, res) => {
     (err, result) => {
       if (err) {
         console.error('Database insertion error:', err);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json(createResponse('Internal server error'));
       } else {
         console.log('Company details submitted successfully');
-        res.status(201).json({ message: 'Company details submitted successfully' });
+        res.status(201).json(createResponse('Company details submitted successfully'));
       }
     }
   );

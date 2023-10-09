@@ -22,13 +22,14 @@ const registerRoutes = require('./routes/registerRoutes');
 const authRoutes = require('./model/authRoutes'); 
 const personalKyc = require('./kyc/personalKyc');
 const uploadUser = require('./kyc/uploadUser');
-
+const userID = require('./model/userID');
 
 app.use('/users', userRoutes);
 app.use('/register', registerRoutes);
 app.use('/auth', authRoutes); 
 app.use('/profile', personalKyc);
 app.use('/upload', uploadUser);
+app.use('/user', userID);
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);

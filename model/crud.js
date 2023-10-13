@@ -1,16 +1,13 @@
 const express = require('express');
 const app = express();
-const db = require('../services/db'); // Your MySQL database connection
+const db = require('../services/db'); 
 
-// Middleware to parse JSON request data
 app.use(express.json());
 
-// Create a new user (Create)
 app.post('/users', (req, res) => {
     const newUser = req.body;
     
-    // Assuming you have different tables for personal, company, and documents
-    // Determine which table to insert data into based on the request
+   
     const tableName = req.body.table_name;
 
     if (tableName === 'personal_information_kyc' || tableName === 'company_information_kyc' || tableName === 'user_documents_kyc') {
@@ -28,13 +25,11 @@ app.post('/users', (req, res) => {
     }
 });
 
-// Get all users (Read)
-// Get all users from different tables
+
 app.get('/users', (req, res) => {
     const users = [];
 
 
-    // Function to retrieve users from personal_information_kyc table
     function getPersonalUsers(callback) {
         db.query('SELECT * FROM personal_information_kyc', (err, rows) => {
             if (!err) {
@@ -44,7 +39,6 @@ app.get('/users', (req, res) => {
         });
     }
 
-    // Function to retrieve users from company_information_kyc table
     function getCompanyUsers(callback) {
         db.query('SELECT * FROM company_information_kyc', (err, rows) => {
             if (!err) {
@@ -54,7 +48,6 @@ app.get('/users', (req, res) => {
         });
     }
 
-    // Function to retrieve users from user_documents_kyc table
     function getUserDocumentsUsers(callback) {
         db.query('SELECT * FROM user_documents_kyc', (err, rows) => {
             if (!err) {
@@ -64,7 +57,6 @@ app.get('/users', (req, res) => {
         });
 }
 
-    // Execute the retrieval functions in parallel and send the combined results
     Promise.all([
         new Promise(getPersonalUsers),
         new Promise(getCompanyUsers),
@@ -80,11 +72,9 @@ app.get('/users', (req, res) => {
 });
 
 
-// Get a specific user by ID (Read)
 app.get('/users/:user_id', (req, res) => {
     const userId = parseInt(req.params.id);
     
-    // Determine which table to select data from based on the request
     const tableName = req.query.table_name;
 
     if (tableName === 'personal_information_kyc' || tableName === 'company_information_kyc' || tableName === 'user_documents_kyc') {
@@ -103,12 +93,10 @@ app.get('/users/:user_id', (req, res) => {
     }
 });
 
-// Update a user by ID (Update)
 app.put('/users/:user_id', (req, res) => {
     const userId = parseInt(req.params.id);
     const updatedUser = req.body;
 
-    // Determine which table to update data in based on the request
     const tableName = req.body.table_name;
 
     if (tableName === 'personal_information_kyc' || tableName === 'company_information_kyc' || tableName === 'user_documents_kyc') {
@@ -127,11 +115,9 @@ app.put('/users/:user_id', (req, res) => {
     }
 });
 
-// Delete a user by ID (Delete)
 app.delete('/users/:user_id', (req, res) => {
     const userId = parseInt(req.params.id);
     
-    // Determine which table to delete data from based on the request
     const tableName = req.query.table_name;
 
     if (tableName === 'personal_information_kyc' || tableName === 'company_information_kyc' || tableName === 'user_documents_kyc') {
@@ -151,9 +137,7 @@ app.delete('/users/:user_id', (req, res) => {
 });
 
 
-// Delete all users (Delete)
 app.delete('/users', (req, res) => {
-    // Determine which table to delete data from based on the request
     const tableName = req.query.table_name;
 
     if (tableName === 'personal_information_kyc' || tableName === 'company_information_kyc' || tableName === 'user_documents_kyc') {

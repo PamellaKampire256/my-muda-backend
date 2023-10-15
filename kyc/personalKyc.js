@@ -6,7 +6,7 @@ const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
 
 router.post(
-  '/create-personalkyc',
+  '/profile',
   [
     check('full_name').notEmpty().escape(),
     check('date_of_birth').notEmpty().isISO8601(),

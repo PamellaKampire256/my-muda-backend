@@ -1,43 +1,8 @@
 const express = require('express');
 const app = express();
-const db = require('../services/db'); // Your MySQL database connection
+const db = require('../services/db'); 
 
-// Middleware to parse JSON request data
 app.use(express.json());
-
-// Create a new user (Create)
-app.post('/users', (req, res) => {
-    const userData = req.body;
-
-    // Insert user data into personal_information_kyc table
-    db.query('INSERT INTO personal_information_kyc SET ?', userData, (err, personalResult) => {
-        if (err) {
-            console.error(err);
-            res.status(500).json({ error: 'Error creating user' });
-        } else {
-            const userId = personalResult.insertId;
-            
-            // Insert user data into company_information_kyc table
-            db.query('INSERT INTO company_information_kyc SET ?', { user_id: userId, ...userData }, (err, companyResult) => {
-                if (err) {
-                    console.error(err);
-                    res.status(500).json({ error: 'Error creating user' });
-                } else {
-                    // Insert user data into user_documents_kyc table
-                    db.query('INSERT INTO user_documents_kyc SET ?', { user_id: userId, ...userData }, (err, userDocumentsResult) => {
-                        if (err) {
-                            console.error(err);
-                            res.status(500).json({ error: 'Error creating user' });
-                        } else {
-                            userData.id = userId;
-                            res.status(201).json({ message: 'User created successfully', user: userData });
-                        }
-                    });
-                }
-            });
-        }
-    });
-});
 
 app.get('/users', (req, res) => {
     const users = {};

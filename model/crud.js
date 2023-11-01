@@ -131,23 +131,20 @@ app.get('/user/:user_id', (req, res) => {
     }
 });
 
-app.put('/users/:user_id', (req, res) => {
+app.put('/update_user/:user_id', (req, res) => {
     const userId = parseInt(req.params.user_id);
     const updatedUser = req.body;
 
-    // Update user data in personal_information_kyc table
     db.query('UPDATE personal_information_kyc SET ? WHERE user_id = ?', [updatedUser, userId], (err, personalResult) => {
         if (err) {
             console.error(err);
             res.status(500).json({ error: 'Error updating user' });
         } else {
-            // Update user data in company_information_kyc table
             db.query('UPDATE company_information_kyc SET ? WHERE user_id = ?', [updatedUser, userId], (err, companyResult) => {
                 if (err) {
                     console.error(err);
                     res.status(500).json({ error: 'Error updating user' });
                 } else {
-                    // Update user data in user_documents_kyc table
                     db.query('UPDATE user_documents_kyc SET ? WHERE user_id = ?', [updatedUser, userId], (err, userDocumentsResult) => {
                         if (err) {
                             console.error(err);
@@ -162,7 +159,7 @@ app.put('/users/:user_id', (req, res) => {
     });
 });
 
-app.delete('/users/:user_id', (req, res) => {
+app.delete('/user/:user_id', (req, res) => {
     const userId = parseInt(req.params.user_id);
 
     // Delete user data from personal_information_kyc table
@@ -190,77 +187,6 @@ app.delete('/users/:user_id', (req, res) => {
             });
         }
     });
-});
-
-app.delete('/users', (req, res) => {
-    const userIDsToDelete = req.body.user_ids; // Assuming user_ids is an array of user IDs to delete
-
-    if (!userIDsToDelete || userIDsToDelete.length === 0) {
-        return res.status(400).json({ error: 'No user IDs provided for deletion' });
-    }
-
-    const deletePromises = [];
-    const deletedUserInformation = [];
-
-    // Create a promise for each table (personal_information_kyc, company_information_kyc, user_documents_kyc)
-    const tables = ['personal_information_kyc', 'company_information_kyc', 'user_documents_kyc'];
-
-    tables.forEach(tableName => {
-        deletePromises.push(new Promise((resolve, reject) => {
-            const sql = `DELETE FROM ${tableName} WHERE user_id IN (?)`;
-            db.query(sql, [userIDsToDelete], (err, result) => {
-                if (err) {
-                    console.error(err);
-                    reject(err);
-                } else {
-                    resolve(result);
-                }
-            });
-        }));
-    });
-
-    Promise.all(deletePromises)
-        .then(results => {
-            // Check for results that had no rows affected
-            const notFoundResults = results.filter(result => result.affectedRows === 0);
-
-            // Store the user IDs that were not found
-            const notFoundUserIDs = [];
-            notFoundResults.forEach((result, index) => {
-                if (result.affectedRows === 0) {
-                    notFoundUserIDs.push(userIDsToDelete[index]);
-                }
-            });
-
-            // Retrieve and store the deleted user information for the found user IDs
-            const selectUserInformationSql = `
-                SELECT * FROM personal_information_kyc 
-                WHERE user_id IN (?)
-                UNION ALL
-                SELECT * FROM company_information_kyc 
-                WHERE user_id IN (?)
-                UNION ALL
-                SELECT * FROM user_documents_kyc 
-                WHERE user_id IN (?)
-            `;
-
-            db.query(selectUserInformationSql, [userIDsToDelete, userIDsToDelete, userIDsToDelete], (err, userInfo) => {
-                if (err) {
-                    console.error(err);
-                    return res.status(500).json({ error: 'Error retrieving user information' });
-                }
-
-                // Send the deleted user information along with IDs and the not found user IDs
-                return res.status(200).json({
-                    message: 'Selected users deleted successfully',
-                    deleted_users: userInfo,
-                    not_found_user_ids: notFoundUserIDs,
-                });
-            });
-        })
-        .catch(err => {
-            return res.status(500).json({ error: 'Error deleting selected users' });
-        });
 });
 
 module.exports = app;

@@ -15,37 +15,34 @@ const storage = multer.diskStorage({
         cb(null, uploadFolder);
     },
     filename: function (req, file, cb) {
-        cb(null, `${Date.now()}${file.originalname}`);
+        cb(null, `${Date.now()}_${file.originalname}`);
     }
 });
 
 const upload = multer({ storage: storage });
 
-router.post('/upload-files', upload.fields([
-    { name: 'national_id_card_or_passport', maxCount: 1 },
-    { name: 'selfie', maxCount: 1 },
-    { name: 'proof_of_address', maxCount: 1 },
-    { name: 'trade_licences', maxCount: 1 }
-]), (req, res) => {
+router.post('/upload-files', upload.any(), async (req, res) => {
     try {
-        const { user_id } = req.body; // Add user_id to the request body
-        const status = 'pending'; // Set the status to "pending"
+        const { user_id } = req.body;
+        const status = 'pending'; 
 
-        const nationalIDFile = req.files['national_id_card_or_passport'][0];
-        const selfieFile = req.files['selfie'][0];
-        const proofOfAddressFile = req.files['proof_of_address'][0];
-        const tradeLicencesFile = req.files['trade_licences'][0];
-
-        if (!nationalIDFile || !selfieFile || !proofOfAddressFile || !tradeLicencesFile) {
-            return res.status(400).send({ message: 'Please upload all required files.' });
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).send({ message: 'No files were uploaded.' });
         }
 
+        const files = req.files;
         const filePaths = {
-            national_id_card_or_passport: nationalIDFile.path,
-            selfie: selfieFile.path,
-            proof_of_address: proofOfAddressFile.path,
-            trade_licences: tradeLicencesFile.path
+            national_id_card_or_passport: null,
+            selfie: null,
+            proof_of_address: null,
+            trade_licences: null
         };
+
+        files.forEach(file => {
+            if (file.fieldname in filePaths) {
+                filePaths[file.fieldname] = file.path;
+            }
+        });
 
         const insertSql = `
             INSERT INTO user_documents_kyc
@@ -53,14 +50,22 @@ router.post('/upload-files', upload.fields([
             VALUES (?, ?, ?, ?, ?, ?)
         `;
 
-        db.query(insertSql, [user_id, filePaths.national_id_card_or_passport, filePaths.selfie, filePaths.proof_of_address, filePaths.trade_licences, status], function (err, result) {
-            if (err) {
-                console.error(err);
-                return res.status(500).send({ message: 'Error inserting file paths into the database.' });
-            }
+        const values = [
+            user_id,
+            filePaths.national_id_card_or_passport,
+            filePaths.selfie,
+            filePaths.proof_of_address,
+            filePaths.trade_licences,
+            status
+        ];
 
+        const result = await db.query(insertSql, values);
+
+        if (result) {
             return res.send({ message: 'File paths are successfully uploaded and stored.', file_paths: filePaths, user_id, status });
-        });
+        } else {
+            return res.status(500).send({ message: 'Error inserting file paths into the database.' });
+        }
     } catch (error) {
         console.error(error);
         return res.status(500).send({ message: 'An error occurred during file upload and database insertion.' });
@@ -68,8 +73,3 @@ router.post('/upload-files', upload.fields([
 });
 
 module.exports = router;
-
-
-module.exports = router;
-
-

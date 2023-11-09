@@ -11,6 +11,7 @@ router.post(
     check('full_name').notEmpty().escape(),
     check('date_of_birth').notEmpty().isISO8601(),
     check('nationality').notEmpty().escape(),
+    check('address').notEmpty().escape(),
     check('id_number').notEmpty().escape(),
     check('phone_number').notEmpty().escape(),
     check('email_address').notEmpty().isEmail().normalizeEmail(),
@@ -22,6 +23,7 @@ router.post(
       full_name,
       date_of_birth,
       nationality,
+      address,
       id_number,
       phone_number,
       email_address,
@@ -42,7 +44,7 @@ router.post(
     const status = 'pending';
 
     const kycSql =
-      'INSERT INTO personal_information_kyc (user_id, full_name, date_of_birth, nationality, id_number, phone_number, email_address, tax_id_number, source_of_funds, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+      'INSERT INTO personal_information_kyc (user_id, full_name, date_of_birth, nationality, address, id_number, phone_number, email_address, tax_id_number, source_of_funds, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
     db.query(
       kycSql,
       [
@@ -50,6 +52,7 @@ router.post(
         full_name,
         date_of_birth,
         nationality,
+        address,
         id_number,
         phone_number,
         email_address,

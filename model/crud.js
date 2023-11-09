@@ -116,6 +116,15 @@ app.get('/user/:user_id', (req, res) => {
                     return res.status(404).send({ message: 'User not found.' });
                 }
 
+                // Assuming that user_documents_kyc has fields like 'national_id_or_passport', 'selfie', etc.
+                // Convert images to base64 before sending
+                const imageFields = ['national_id_card_or_passport', 'selfie', 'proof_of_address', 'trade_licences'];
+                imageFields.forEach((field) => {
+                    if (user_information[field]) {
+                        user_information[field] = Buffer.from(user_information[field]).toString('base64');
+                    }
+                });
+
                 return res.status(200).send({
                     message: 'User information retrieved successfully',
                     user_information
